@@ -201,6 +201,85 @@ const loginUser = async (req, res) => {
         });
     }
 };
+// ==========================================
+// CHANGE PASSWORD
+// ==========================================
+
+const changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Current password and new password are required"
+            });
+        }
+
+        if (
+            typeof currentPassword !== "string" ||
+            typeof newPassword !== "string"
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid input format"
+            });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: "New password must contain at least 8 characters"
+            });
+        }
+
+        if (currentPassword === newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "New password must be different from current password"
+            });
+        }
+
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        const isCurrentPasswordCorrect = await bcrypt.compare(
+            currentPassword,
+            user.password
+        );
+
+        if (!isCurrentPasswordCorrect) {
+            return res.status(400).json({
+                success: false,
+                message: "Current password is incorrect"
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        user.password = hashedPassword;
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Password changed successfully"
+        });
+
+    } catch (error) {
+        console.error("Change Password Error:", error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server Error"
+        });
+    }
+};
 
 // ==========================================
 // EXPORT CONTROLLERS
@@ -208,5 +287,6 @@ const loginUser = async (req, res) => {
 
 module.exports = {
     registerUser,
-    loginUser
+    loginUser,
+    changePassword
 };
